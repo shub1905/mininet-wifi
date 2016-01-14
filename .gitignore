@@ -12,3 +12,6 @@ doc/html
 doc/latex
 trunk
 iw
+*.egg
+*.d
+*.o
