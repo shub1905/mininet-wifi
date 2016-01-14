@@ -58,6 +58,7 @@ import re
 import signal
 import select
 import subprocess
+import docker
 
 from subprocess import Popen, PIPE
 from time import sleep
@@ -687,6 +688,149 @@ class Node( object ):
 class Host( Node ):
     "A host is simply a Node"
     pass
+
+class Docker ( Host ):
+    """Node that represents a docker container.
+    This part is inspired by:
+    http://techandtrains.com/2014/08/21/docker-container-as-mininet-host/
+    We use the docker-py client library to control docker.
+    """
+
+    def __init__(self, name, dimage, dcmd=None, **kwargs):
+        self.dimage = dimage
+        self.dnameprefix = "mn"
+        self.dcmd = dcmd if dcmd is not None else "/bin/bash"
+        self.dc = None  # pointer to the container
+
+        # setup docker client
+        self.dcli = docker.Client(base_url='unix://var/run/docker.sock')
+
+        debug("Created docker container object %s\n" % name)
+        debug("image: %s\n" % str(self.dimage))
+        debug("dcmd: %s\n" % str(self.dcmd))
+        debug("kwargs: %s\n" % str(kwargs))
+
+        self.container_open = kwargs.get('open',True)
+
+        # call original Node.__init__
+        Host.__init__(self, name, **kwargs)
+
+    def startShell( self, mnopts=None ):
+        # creats host config for container
+        # see: https://docker-py.readthedocs.org/en/latest/hostconfig/
+        hc = self.dcli.create_host_config(
+            network_mode=None,
+            privileged=True  # we need this mode to allow mininet network setup
+        )
+        # create new docker container
+        self.dc = self.dcli.create_container(
+            name="%s.%s" % (self.dnameprefix, self.name),
+            image=self.dimage,
+            command=self.dcmd,
+            stdin_open=self.container_open,  # keep container open
+            tty=True,  # allocate pseudo tty
+            environment={"PS1": chr(127)},  # does not seem to have an effect
+            network_disabled=True,  # we will do network on our own
+            host_config=hc
+        )
+        # start the container
+        self.dcli.start(self.dc)
+
+        debug("Docker container %s started\n" % self.name)
+        # fetch information about new container
+        self.dcinfo = self.dcli.inspect_container(self.dc)
+
+        # use a new shell to connect to conatiner to ensure that we a not
+        # blocked by initial container command
+        self.dcmd_final = self.dcmd if self.container_open else '/bin/ash'
+        cmd = ["docker",
+               "exec",
+               "-it",
+               "%s.%s" % (self.dnameprefix, self.name),
+               self.dcmd_final
+               ]
+        # Spawn a shell subprocess in a pseudo-tty, to disable buffering
+        # in the subprocess and insulate it from signals (e.g. SIGINT)
+        # received by the parent
+        master, slave = pty.openpty()
+        self.shell = self._popen( cmd, stdin=slave, stdout=slave, stderr=slave,
+                                  close_fds=False )
+        # original Mininet membervars set in startShell method
+        self.stdin = os.fdopen( master, 'rw' )
+        self.stdout = self.stdin
+        self.pid = self._get_pid()
+        self.pollOut = select.poll()
+        self.pollOut.register( self.stdout )
+        self.outToNode[ self.stdout.fileno() ] = self
+        self.inToNode[ self.stdin.fileno() ] = self
+        self.execed = False
+        self.lastCmd = None
+        self.lastPid = None
+        self.readbuf = ''
+        self.waiting = False
+
+        # fix container environment (sentinal chr(127))
+        self.cmd('export PS1="\\177"')
+
+    def terminate( self ):
+        """ Stop docker container """
+        self.dcli.stop(self.dc, timeout=1)
+        # also remove the container
+        # TODO this should be optional later
+        self.dcli.remove_container(self.dc)
+        self.cleanup()
+
+    def monitor( self, timeoutms=None, findPid=True ):
+        """Monitor and return the output of a command.
+           Set self.waiting to False if command has completed.
+           timeoutms: timeout in ms or None to wait indefinitely
+           findPid: look for PID from mnexec -p"""
+        self.waitReadable( timeoutms )
+        data = self.read( 1024 )
+        pidre = r'\[\d+\] \d+\r\n'
+        # Look for PID
+        marker = chr( 1 ) + r'\d+\r\n'
+        if findPid and chr( 1 ) in data:
+            # suppress the job and PID of a backgrounded command
+            if re.findall( pidre, data ):
+                data = re.sub( pidre, '', data )
+            # Marker can be read in chunks; continue until all of it is read
+            while not re.findall( marker, data ):
+                data += self.read( 1024 )
+            markers = re.findall( marker, data )
+            if markers:
+                self.lastPid = int( markers[ 0 ][ 1: ] )
+                data = re.sub( marker, '', data )
+        # Look for sentinel/EOF
+        if len( data ) > 0 and data[ -1 ] == chr( 127 ):
+            self.waiting = False
+            data = data[ :-1 ]
+        elif chr( 127 ) in data:
+            self.waiting = False
+            data = data.replace( chr( 127 ), '' )
+        # Suppress original cmd input (will otherwise be printed in docker TTY)
+        if len( data ) > 0:
+            data = data.replace( self.lastCmd, '').lstrip()
+        return data
+
+    def popen( self, *args, **kwargs ):
+        """Return a Popen() object in node's namespace
+           args: Popen() args, single list, or string
+           kwargs: Popen() keyword args"""
+        # Tell mnexec to execute command in our cgroup
+        mncmd = ["docker",
+                 "exec",
+                 "-it",
+                 "%s.%s" % (self.dnameprefix, self.name),
+                 "/bin/bash"
+                 ]
+        return Host.popen( self, *args, mncmd=mncmd, **kwargs )
+
+    def _get_pid(self):
+        state = self.dcinfo.get("State", None)
+        if state:
+            return state.get("Pid", -1)
+        return -1
 
 class CPULimitedHost( Host ):
 
