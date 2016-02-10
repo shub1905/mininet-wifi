@@ -67,9 +67,32 @@ class Intf( object ):
         "Run a command in our owning node"
         return self.node.cmd( *args, **kwargs )
 
+    def prefix_netmask(self, prefixLen=None):
+        '''Method to update IP for old Linux kernels
+        as they don't accept ifconfig 10.0.0.1/24 param'''
+        if prefixLen == None:
+            return None
+        
+        mask = '1' * int(prefixLen)
+        netmask = []
+        while(len(mask) > 0):
+            temp_str = str(int(mask[:8],2)).zfill(3)
+            netmask.append(temp_str)
+            mask = mask[8:]
+            
+        while(len(netmask) < 4):
+            netmask.append('000')
+
+        return '.'.join(netmask)
+
     def ifconfig( self, *args ):
         "Configure ourselves using ifconfig"
-        return self.cmd( 'ifconfig', self.name, *args )
+        # return self.cmd( 'ifconfig', self.name, *args )
+        mask = self.prefix_netmask(self.prefixLen)
+        if mask:
+            return self.cmd( 'ifconfig', self.name, self.ip, 'netmask', mask, *args[1:] )
+        else:
+            return self.cmd( 'ifconfig', self.name, *args)
    
     def setIP( self, ipstr, prefixLen=None ):
         """Set our IP address"""
