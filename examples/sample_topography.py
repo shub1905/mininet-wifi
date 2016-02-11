@@ -1,7 +1,8 @@
 #!/usr/bin/python
 
 """
-This example shows how to work with authentication.
+This example shows how to create a simple real-world like network
+using docker containers (based on existing images) and authentication.
 """
 import sys
 sys.path = ['/home/mininet/mininet_wifi_forked', '.'] + sys.path
@@ -21,21 +22,21 @@ def topology():
     info( '*** Adding controller\n' )
     net.addController( 'c0' )
 
-    images = ['ubuntu','fedora']
+    image = 'ubuntu'
     cmd = '/bin/bash'
 
     print "*** Creating nodes"
-    ap1 = net.addBaseStation( 'ap1', ssid="simplewifi", mode="g", channel="5" )
+    ap1 = net.addBaseStation( 'ap1', ssid="simplewifi", mode="g", channel="5", passwd='123456789a', encrypt='wpa2')
 
-    sta1 = net.addStation('sta1', ip='10.0.0.1' )
-    sta2 = net.addStation('sta2', ip='10.0.0.2' )
-    sta3 = net.addStation('sta3', ip='10.0.0.3' )
+    sta1 = net.addStation( 'sta1', passwd='123456789a', encrypt='wpa2')
+    sta2 = net.addStation( 'sta2', passwd='123456789ab', encrypt='wpa2')
+    sta3 = net.addStation( 'sta3', passwd='123456789a', encrypt='wpa2')
 
-    h1 = net.addHost('h1', ip='10.0.0.4', cls=Docker, dimage=images[0], dcmd=cmd)
-    h2 = net.addHost('h2', ip='10.0.0.5', cls=Docker, dimage=images[0], dcmd=cmd)
-    h3 = net.addHost('h3', ip='10.0.0.6')
+    h1 = net.addHost('h1', cls=Docker, dimage=image, dcmd=cmd)
+    h2 = net.addHost('h2', cls=Docker, dimage=image, dcmd=cmd)
+    h3 = net.addHost('h3')
 
-    h4 = net.addHost('h4', ip='10.0.0.7', cls=Docker, dimage=images[0], dcmd=cmd)
+    h4 = net.addHost('h4', cls=Docker, dimage=image, dcmd=cmd)
 
     c0 = net.addController('c0', controller=Controller, ip='127.0.0.1', port=6633)
 
