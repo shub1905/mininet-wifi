@@ -3,7 +3,8 @@
 """
 This example shows how to work with authentication.
 """
-
+import sys
+sys.path = ['/home/mininet/forked_mininet', '.'] + sys.path
 from mininet.net import Mininet
 from mininet.node import  Controller, OVSKernelSwitch
 from mininet.cli import CLI

@@ -5,7 +5,8 @@ This example shows how to create a simple network and
 how to create docker containers (based on existing images)
 to it.
 """
-
+import sys
+sys.path = ['/home/mininet/mininet_wifi_forked', '.'] + sys.path
 from mininet.net import Dockernet
 from mininet.node import Controller, Docker, OVSSwitch
 from mininet.cli import CLI

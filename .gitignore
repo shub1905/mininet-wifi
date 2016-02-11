@@ -15,3 +15,9 @@ iw
 *.egg
 *.d
 *.o
+
+# Meta Files
+._*
+
+# idea files
+.idea/
