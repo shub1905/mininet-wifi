@@ -163,6 +163,11 @@ This example monitors a number of hosts using `host.popen()` and
 This example demonstrates monitoring output from multiple hosts using
 the `node.popen()` interface (which returns `Popen` objects) and `pmonitor()`.
 
+#### Sample_topography.py
+
+This example shows how to create a simple real-world like network using docker containers (based on existing images)
+to it. It spawn the following topology. [[https://drive.google.com/file/d/0B7YY8qfxx8ivR3BmbTNFRnlMdHc/view?usp=sharing|alt=octocat]]
+
 #### scratchnet.py, scratchnetuser.py:
 
 These two examples demonstrate how to create a network by using the lowest-
