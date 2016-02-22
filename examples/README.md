@@ -2,7 +2,8 @@ Mininet Examples
 ========================================================
 
 These examples are intended to help you get started using
-Mininet's Python API.
+Mininet's Python API. These are some basic explanations of
+these examples.
 
 ========================================================
 
@@ -188,6 +189,11 @@ connectivity using `ping`, for different switch/datapath types.
 #### vlanhost.py:
 
 An example of how to subclass Host to use a VLAN on its primary interface.
+
+#### wifiAuthentication.py:
+
+This example sets up a basic wifi network with a couple of hosts and an access point
+with WPA2-PSK authentication.  
 
 #### wifiMobility.py:
 
