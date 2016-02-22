@@ -71,6 +71,16 @@ as the data network, by actually creating two Mininet objects.
 
 This example tests iperf bandwidth for varying CPU limits.
 
+#### docker_example.py:
+
+This example contains basic integration of Docker containers inside mininet. 
+Extending this example should help to launch mininet topologies based on docker 
+containers as the hosts.  
+
+#### docker-integration.py:
+
+This example contains integration of Docker containers inside mininet with Wifi networking.  
+
 #### emptynet.py:
 
 This example demonstrates creating an empty network (i.e. with no
