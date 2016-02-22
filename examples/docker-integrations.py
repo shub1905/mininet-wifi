@@ -12,14 +12,15 @@ from mininet.cli import CLI
 from mininet.log import setLogLevel
 from mininet.link import TCLink
 
+# TODO: Iron out Bug: (Race Condition) Sometimes network doesn't setups properly.
 def topology():
     "Create a network."
     net = Mininet( controller=Controller, link=TCLink, switch=OVSKernelSwitch )
 
-    # image = 'shub1905/chaos:hostapd_latest'
-    # image2 = 'shub1905/ubuntu:updated_wpa'
-    # cmd = '/bin/ash'
-    # cmd2 = '/bin/bash'
+    image = 'shub1905/chaos:hostapd_latest'
+    image2 = 'shub1905/ubuntu:updated_wpa'
+    cmd = '/bin/ash'
+    cmd2 = '/bin/bash'
 
     print "*** Creating nodes"
     sta1 = net.addStation( 'sta1', ip='10.0.0.1', passwd='123456789a', encrypt='wpa2', cls=Docker, dimage=image2, dcmd=cmd2 )
